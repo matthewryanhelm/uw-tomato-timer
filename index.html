@@ -252,6 +252,7 @@
             background: rgba(255, 255, 255, 0.6);
             border-radius: 8px;
             margin-top: 8px;
+            text-align: center;
         }
 
         .section-content h4 {
@@ -270,6 +271,7 @@
             color: var(--text-primary);
             font-size: 14px;
             font-weight: 500;
+            text-align: center;
         }
 
         .setting-item input[type="number"] {
@@ -291,6 +293,7 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            justify-content: center;
         }
 
         .time-input {
@@ -488,6 +491,10 @@
                             Repeat cycle after completion
                         </label>
                     </div>
+                    <div class="setting-item">
+                        <label>Number of loop cycles (0 = infinite):</label>
+                        <input type="number" id="loopCycles" value="0" min="0" max="99">
+                    </div>
                     <div class="sequence-info">
                         <strong>Sequence:</strong> P → SB → P → SB → P → SB → P → LB → repeat
                     </div>
@@ -513,27 +520,27 @@
                     <div class="setting-item">
                         <label><strong>Pomodoro Duration:</strong></label>
                         <div class="time-input-row">
-                            <input type="number" id="pomodoroMinutes" value="25" min="0" max="60" class="time-input">
+                            <input type="number" id="pomodoroMinutes" value="25" min="0" max="60" class="time-input" oninput="timer.updateDurations()">
                             <span>min</span>
-                            <input type="number" id="pomodoroSeconds" value="0" min="0" max="59" class="time-input">
+                            <input type="number" id="pomodoroSeconds" value="0" min="0" max="59" class="time-input" oninput="timer.updateDurations()">
                             <span>sec</span>
                         </div>
                     </div>
                     <div class="setting-item">
                         <label><strong>Short Break Duration:</strong></label>
                         <div class="time-input-row">
-                            <input type="number" id="shortBreakMinutes" value="5" min="0" max="60" class="time-input">
+                            <input type="number" id="shortBreakMinutes" value="5" min="0" max="60" class="time-input" oninput="timer.updateDurations()">
                             <span>min</span>
-                            <input type="number" id="shortBreakSeconds" value="0" min="0" max="59" class="time-input">
+                            <input type="number" id="shortBreakSeconds" value="0" min="0" max="59" class="time-input" oninput="timer.updateDurations()">
                             <span>sec</span>
                         </div>
                     </div>
                     <div class="setting-item">
                         <label><strong>Long Break Duration:</strong></label>
                         <div class="time-input-row">
-                            <input type="number" id="longBreakMinutes" value="15" min="0" max="60" class="time-input">
+                            <input type="number" id="longBreakMinutes" value="15" min="0" max="60" class="time-input" oninput="timer.updateDurations()">
                             <span>min</span>
-                            <input type="number" id="longBreakSeconds" value="0" min="0" max="59" class="time-input">
+                            <input type="number" id="longBreakSeconds" value="0" min="0" max="59" class="time-input" oninput="timer.updateDurations()">
                             <span>sec</span>
                         </div>
                     </div>
@@ -598,6 +605,9 @@
                 this.interval = null;
                 this.loopEnabled = false;
                 this.sessionsCompleted = 0;
+                this.cyclesCompleted = 0;
+                this.audioContext = null;
+                this.currentOscillator = null;
             }
 
             toggle() {
@@ -633,9 +643,20 @@
             reset() {
                 clearInterval(this.interval);
                 this.isRunning = false;
-                this.modes.pomodoro.duration = (parseInt(document.getElementById('pomodoroMinutes').value) || 25) * 60 + (parseInt(document.getElementById('pomodoroSeconds').value) || 0);
-                this.modes.shortBreak.duration = (parseInt(document.getElementById('shortBreakMinutes').value) || 5) * 60 + (parseInt(document.getElementById('shortBreakSeconds').value) || 0);
-                this.modes.longBreak.duration = (parseInt(document.getElementById('longBreakMinutes').value) || 15) * 60 + (parseInt(document.getElementById('longBreakSeconds').value) || 0);
+                this.stopAllSounds();
+                
+                // Treat blank inputs as 0, not defaults
+                const pomMin = document.getElementById('pomodoroMinutes').value;
+                const pomSec = document.getElementById('pomodoroSeconds').value;
+                const shortMin = document.getElementById('shortBreakMinutes').value;
+                const shortSec = document.getElementById('shortBreakSeconds').value;
+                const longMin = document.getElementById('longBreakMinutes').value;
+                const longSec = document.getElementById('longBreakSeconds').value;
+                
+                this.modes.pomodoro.duration = (parseInt(pomMin === '' ? '0' : pomMin) || 0) * 60 + (parseInt(pomSec === '' ? '0' : pomSec) || 0);
+                this.modes.shortBreak.duration = (parseInt(shortMin === '' ? '0' : shortMin) || 0) * 60 + (parseInt(shortSec === '' ? '0' : shortSec) || 0);
+                this.modes.longBreak.duration = (parseInt(longMin === '' ? '0' : longMin) || 0) * 60 + (parseInt(longSec === '' ? '0' : longSec) || 0);
+                
                 this.timeLeft = this.modes[this.currentMode].duration;
                 this.updateDisplay();
                 document.getElementById('startBtn').textContent = 'Start';
@@ -665,9 +686,26 @@
             }
 
             autoSwitch() {
+                // Check if we should stop looping based on cycle limit
+                const maxCycles = parseInt(document.getElementById('loopCycles').value) || 0;
+                const repeatEnabled = document.getElementById('repeatCycle').checked;
+                
+                if (!repeatEnabled) {
+                    document.getElementById('status').textContent = 'Time\'s up!';
+                    return;
+                }
+                
                 if (this.currentMode === 'pomodoro') {
                     const pomodorosBeforeLong = parseInt(document.getElementById('pomodorosBeforeLong').value) || 4;
                     if (this.sessionsCompleted % pomodorosBeforeLong === 0) {
+                        this.cyclesCompleted++;
+                        
+                        // Check if we've reached the cycle limit (0 = infinite)
+                        if (maxCycles > 0 && this.cyclesCompleted >= maxCycles) {
+                            document.getElementById('status').textContent = 'All cycles completed!';
+                            return;
+                        }
+                        
                         this.switchMode('longBreak');
                     } else {
                         this.switchMode('shortBreak');
@@ -702,6 +740,26 @@
                     `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             }
 
+            updateDurations() {
+                // Update durations from settings inputs - treat blank as 0, not default
+                const pomMin = document.getElementById('pomodoroMinutes').value;
+                const pomSec = document.getElementById('pomodoroSeconds').value;
+                const shortMin = document.getElementById('shortBreakMinutes').value;
+                const shortSec = document.getElementById('shortBreakSeconds').value;
+                const longMin = document.getElementById('longBreakMinutes').value;
+                const longSec = document.getElementById('longBreakSeconds').value;
+                
+                this.modes.pomodoro.duration = (parseInt(pomMin === '' ? '0' : pomMin) || 0) * 60 + (parseInt(pomSec === '' ? '0' : pomSec) || 0);
+                this.modes.shortBreak.duration = (parseInt(shortMin === '' ? '0' : shortMin) || 0) * 60 + (parseInt(shortSec === '' ? '0' : shortSec) || 0);
+                this.modes.longBreak.duration = (parseInt(longMin === '' ? '0' : longMin) || 0) * 60 + (parseInt(longSec === '' ? '0' : longSec) || 0);
+                
+                // If timer is not running, update current time display immediately
+                if (!this.isRunning) {
+                    this.timeLeft = this.modes[this.currentMode].duration;
+                    this.updateDisplay();
+                }
+            }
+
             playSound() {
                 const soundFile = (document.getElementById('sound-select')?.value) || 'timer-sound.mp3';
                 if (soundFile === 'FALLBACK') {
@@ -717,18 +775,37 @@
 
             playFallbackBeep() {
                 try {
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const osc = ctx.createOscillator();
-                    const g = ctx.createGain();
-                    osc.connect(g);
-                    g.connect(ctx.destination);
-                    osc.frequency.value = 950;
-                    osc.type = 'triangle';
-                    g.gain.setValueAtTime(0.3, ctx.currentTime);
-                    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
-                    osc.start(ctx.currentTime);
-                    osc.stop(ctx.currentTime + 0.6);
+                    this.stopAllSounds();
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.currentOscillator = this.audioContext.createOscillator();
+                    const g = this.audioContext.createGain();
+                    this.currentOscillator.connect(g);
+                    g.connect(this.audioContext.destination);
+                    this.currentOscillator.frequency.value = 950;
+                    this.currentOscillator.type = 'triangle';
+                    g.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.6);
+                    this.currentOscillator.start(this.audioContext.currentTime);
+                    this.currentOscillator.stop(this.audioContext.currentTime + 0.6);
                 } catch (e) {}
+            }
+
+            stopAllSounds() {
+                // Stop any playing oscillator
+                if (this.currentOscillator) {
+                    try {
+                        this.currentOscillator.stop();
+                        this.currentOscillator = null;
+                    } catch (e) {}
+                }
+                
+                // Close audio context
+                if (this.audioContext) {
+                    try {
+                        this.audioContext.close();
+                        this.audioContext = null;
+                    } catch (e) {}
+                }
             }
         }
 
