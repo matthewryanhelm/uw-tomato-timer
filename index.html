@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UW Pomodoro Timer</title>
+    <title>UW Timer</title>
     <style>
         :root {
             --uw-brown: #492F24;
@@ -614,6 +614,7 @@
                 this.cyclesCompleted = 0;
                 this.audioContext = null;
                 this.currentOscillator = null;
+                this.currentAudio = null;
             }
 
             toggle() {
@@ -767,15 +768,25 @@
             }
 
             playSound() {
+                this.stopAllSounds();
                 const soundFile = (document.getElementById('sound-select')?.value) || 'timer-sound.mp3';
                 if (soundFile === 'FALLBACK') {
                     this.playFallbackBeep();
                     return;
                 }
-                const audio = new Audio(soundFile);
-                audio.volume = 0.7;
+                this.currentAudio = new Audio(soundFile);
+                this.currentAudio.volume = 0.7;
                 let played = false;
-                audio.play().then(() => { played = true; }).catch(() => { this.playFallbackBeep(); });
+                this.currentAudio.play().then(() => { played = true; }).catch(() => { this.playFallbackBeep(); });
+                
+                // Limit sound to 3 seconds max
+                setTimeout(() => {
+                    if (this.currentAudio) {
+                        this.currentAudio.pause();
+                        this.currentAudio.currentTime = 0;
+                    }
+                }, 6000);
+                
                 setTimeout(() => { if (!played) this.playFallbackBeep(); }, 500);
             }
 
@@ -797,6 +808,15 @@
             }
 
             stopAllSounds() {
+                // Stop any playing audio file
+                if (this.currentAudio) {
+                    try {
+                        this.currentAudio.pause();
+                        this.currentAudio.currentTime = 0;
+                        this.currentAudio = null;
+                    } catch (e) {}
+                }
+                
                 // Stop any playing oscillator
                 if (this.currentOscillator) {
                     try {
