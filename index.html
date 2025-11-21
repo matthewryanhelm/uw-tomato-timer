@@ -50,7 +50,31 @@
             font-size: 1.1em;
             font-weight: 500;
         }
-
+        .header-flex {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 1.4em;
+              margin-bottom: 1.5em;
+              flex-wrap: wrap;
+        }
+        .header-logo {
+              height: 64px;
+              width: auto;
+              max-width: 120px;
+              object-fit: contain;
+              flex-shrink: 0;
+        }
+    @media (max-width: 600px) {
+        .header-flex {
+            flex-direction: column;
+    gap: 0.8em;
+  }
+  .header-logo {
+    height: 48px;
+    max-width: 90px;
+  }
+}
         .timer-container {
             background: white;
             border-radius: 20px;
@@ -490,10 +514,9 @@
 </head>
 <body>
     <header>
-        <h1>UWyo Pomodoro Timer</h1>
+        <h1><IMG src="UWlogo.png"> UWyo Pomodoro Timer</h1>
         <p class="subtitle">Cowboys Productivity Tool</p>
     </header>
-
     <div class="timer-container">
         <div class="timer-mode">
             <button class="mode-btn active" data-mode="pomodoro">Pomodoro</button>
