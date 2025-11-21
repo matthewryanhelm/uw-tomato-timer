@@ -496,6 +496,49 @@
                 font-size: 1em;
             }
         }
+                .info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .info-header h3 {
+            margin: 0;
+        }
+
+        .toggle-info {
+            background: var(--uw-gold);
+            color: var(--uw-brown);
+            border: none;
+            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .toggle-info:hover {
+            background: var(--uw-light-gold);
+            transform: scale(1.05);
+        }
+
+        .info-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .info-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+        }
     </style>
 </head>
 <body>
@@ -610,9 +653,12 @@
         </div>
     </div>
 
-    <div class="info-section">
-        <h2 class="info-title">About the Pomodoro Technique</h2>
-        <p class="info-text">
+     <div class="info-box">
+            <div class="info-header">
+                <h2>About the Pomodoro Technique</h2>
+                <button class="toggle-info" onclick="toggleInfo()" aria-label="Toggle information">▼</button>
+            </div>
+            <div id="info-content" class="info-content collapsed">
             The Pomodoro Technique is a time management method developed by Francesco Cirillo in the late 1980s. 
             It helps boost productivity by breaking work into focused intervals with regular breaks.
         </p>
@@ -1016,6 +1062,18 @@
 
         // Initialize the timer
         const timer = new PomodoroTimer();
+        function toggleInfo() {
+            const content = document.getElementById('info-content');
+            const button = document.querySelector('.toggle-info');
+            
+            content.classList.toggle('collapsed');
+            
+            if (content.classList.contains('collapsed')) {
+                button.textContent = '▼';
+            } else {
+                button.textContent = '▲';
+            }
+        }
     </script>
 </body>
 </html>
