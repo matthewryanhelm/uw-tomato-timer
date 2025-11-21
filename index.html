@@ -816,17 +816,25 @@
                 this.timerLabel.textContent = 'Paused';
             }
 
-            reset() {
-                clearInterval(this.interval);
+           reset() {
+            clearInterval(this.interval);
                 this.isRunning = false;
-                this.isPaused = false;
-                this.timeLeft = this.modes[this.currentMode];
-                this.sequenceIndex = 0;
+    
+                this.timeLeft = this.modes[this.currentMode].duration;
+    
                 this.updateDisplay();
-                this.startBtn.style.display = 'inline-block';
-                this.pauseBtn.style.display = 'none';
-                this.timerLabel.textContent = 'Ready to focus?';
-                this.updateProgressTracker();
+    
+            document.getElementById('startBtn').textContent = 'Start';
+            document.getElementById('startBtn').classList.remove('active');
+    
+            const statusMessages = {
+                'pomodoro': 'Ready to focus?',
+                'shortBreak': 'Ready for a short break?',
+                'longBreak': 'Ready for a long break?'
+            };
+        
+               document.getElementById('status').textContent = statusMessages[this.currentMode];
+    
             }
 
             complete() {
