@@ -383,14 +383,14 @@
             margin-top: 30px;
         }
 
-        .info- {
+        .info-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
         }
 
-        .info- h3 {
+        .info-header h3 {
             margin: 0;
             color: var(--uw-brown);
         }
@@ -435,6 +435,12 @@
             color: var(--text-secondary);
             font-size: 14px;
         }
+    
+        #sequenceDisplay {
+            font-family: monospace;
+            letter-spacing: 0.05em;
+        }
+
     </style>
 </head>
 <body>
@@ -496,8 +502,7 @@
                         <input type="number" id="loopCycles" value="0" min="0" max="99">
                     </div>
                     <div class="sequence-info">
-                        <strong>Sequence:</strong> P → SB → P → SB → P → SB → P → LB → repeat
-                    </div>
+                        <strong>Sequence:</strong> <span id="sequenceDisplay">P → SB → P → SB → P → SB → P → LB → repeat</span></div>
                     
                     <div class="sessions-box">
                         <h4>Sessions Completed</h4>
@@ -696,47 +701,45 @@
             }
 
             autoSwitch() {
-                // Check if we've completed all loop cycles
-                if (this.loopCycles > 0 && this.loopCyclesCompleted >= this.loopCycles) {
-                    this.loopEnabled = false;
-                    clearInterval(this.interval);
-                    this.isRunning = false;
-                    document.getElementById('status').textContent = 'Loop complete!';
-                    document.getElementById('startBtn').textContent = 'Start';
-                    setTimeout(() => this.reset(), 5000);
-                    return;
-                }
+                // Check if we should stop looping based on cycle limit
+		 if (this.loopCycles > 0 && this.loopCyclesCompleted >= this.loopCycles) {
+       						 this.loopEnabled = false;
+        					clearInterval(this.interval);
+        					this.isRunning = false;
+        						document.getElementById('status').textContent = 'Loop complete!';
+        						document.getElementById('startBtn').textContent = 'Start';
+        						setTimeout(() => this.reset(), 5000);
+        					return;
+		    }
 
-                // Check if repeat is disabled
-                if (!document.getElementById('repeatCycle').checked) {
+                const maxCycles = parseInt(document.getElementById('loopCycles').value) || 0;
+                const repeatEnabled = document.getElementById('repeatCycle').checked;
+                
+                if (!repeatEnabled) {
                     document.getElementById('status').textContent = 'Time\'s up!';
+                    // Auto-reset after 5 seconds
                     setTimeout(() => this.reset(), 5000);
                     return;
                 }
-
-                // Determine next mode based on current mode
+                
                 if (this.currentMode === 'pomodoro') {
-                    const pomodorosBeforeShort = parseInt(document.getElementById('pomodorosBeforeShort').value) || 1;
                     const pomodorosBeforeLong = parseInt(document.getElementById('pomodorosBeforeLong').value) || 4;
-
-                    // Use modulo to determine if we should take long break
-                    // sessionsCompleted is the number of pomodoros finished
                     if (this.sessionsCompleted % pomodorosBeforeLong === 0) {
-                        // Time for long break - also increment loop cycle
-                        this.loopCyclesCompleted++;
+                        this.cyclesCompleted++;
+                        
+                        // Check if we've reached the cycle limit (0 = infinite)
+                        if (maxCycles > 0 && this.cyclesCompleted >= maxCycles) {
+                            document.getElementById('status').textContent = 'All cycles completed!';
+                            return;
+                        }
+                        
                         this.switchMode('longBreak');
-                    } else if (this.sessionsCompleted % pomodorosBeforeShort === 0) {
-                        // Time for short break
-                        this.switchMode('shortBreak');
                     } else {
-                        // Default to short break (shouldn't normally hit this)
                         this.switchMode('shortBreak');
                     }
                 } else {
-                    // After any break, return to pomodoro
                     this.switchMode('pomodoro');
                 }
-
                 this.start();
             }
 
@@ -877,12 +880,40 @@
             button.textContent = content.classList.contains('collapsed') ? '▼' : '▲';
         }
     
-        // Update loop cycles when input changes
-        document.getElementById('loopCycles').addEventListener('input', function() {
-            if (timer) {
-                timer.loopCycles = parseInt(this.value) || 0;
+        // Update sequence display dynamically
+        function updateSequenceDisplay() {
+            const beforeShort = parseInt(document.getElementById('pomodorosBeforeShort').value) || 1;
+            const beforeLong = parseInt(document.getElementById('pomodorosBeforeLong').value) || 4;
+
+            let sequence = [];
+            for (let i = 1; i <= beforeLong; i++) {
+                sequence.push('P');
+                if (i < beforeLong && i % beforeShort === 0) {
+                    sequence.push('SB');
+                } else if (i === beforeLong) {
+                    sequence.push('LB');
+                }
+            }
+
+            const repeatCycle = document.getElementById('repeatCycle').checked;
+            if (repeatCycle) {
+                sequence.push('repeat');
+            }
+
+            document.getElementById('sequenceDisplay').textContent = sequence.join(' → ');
+        }
+
+        // Add event listeners for inputs
+        ['pomodorosBeforeShort', 'pomodorosBeforeLong', 'repeatCycle'].forEach(id => {
+            const elem = document.getElementById(id);
+            if (elem) {
+                elem.addEventListener('input', updateSequenceDisplay);
+                elem.addEventListener('change', updateSequenceDisplay);
             }
         });
+
+        // Initial update
+        setTimeout(updateSequenceDisplay, 100);
 
     </script>
 </body>
