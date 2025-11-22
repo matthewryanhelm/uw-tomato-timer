@@ -611,6 +611,7 @@
                 this.interval = null;
                 this.loopEnabled = false;
                 this.sessionsCompleted = 0;
+            this.loopCyclesCompleted = 0;
                 this.cyclesCompleted = 0;
                 this.audioContext = null;
                 this.currentOscillator = null;
@@ -689,37 +690,53 @@
                     setTimeout(() => this.autoSwitch(), 1000);
                 } else {
                     document.getElementById('status').textContent = 'Time\'s up!';
+                    // Auto-reset after 5 seconds
+                    setTimeout(() => this.reset(), 5000);
                 }
             }
 
             autoSwitch() {
-                // Check if we should stop looping based on cycle limit
-                const maxCycles = parseInt(document.getElementById('loopCycles').value) || 0;
-                const repeatEnabled = document.getElementById('repeatCycle').checked;
-                
-                if (!repeatEnabled) {
-                    document.getElementById('status').textContent = 'Time\'s up!';
+                // Check if we've completed all loop cycles
+                if (this.loopCycles > 0 && this.loopCyclesCompleted >= this.loopCycles) {
+                    this.loopEnabled = false;
+                    clearInterval(this.interval);
+                    this.isRunning = false;
+                    document.getElementById('status').textContent = 'Loop complete!';
+                    document.getElementById('startBtn').textContent = 'Start';
+                    setTimeout(() => this.reset(), 5000);
                     return;
                 }
-                
+
+                // Check if repeat is disabled
+                if (!document.getElementById('repeatCycle').checked) {
+                    document.getElementById('status').textContent = 'Time\'s up!';
+                    setTimeout(() => this.reset(), 5000);
+                    return;
+                }
+
+                // Determine next mode based on current mode
                 if (this.currentMode === 'pomodoro') {
+                    const pomodorosBeforeShort = parseInt(document.getElementById('pomodorosBeforeShort').value) || 1;
                     const pomodorosBeforeLong = parseInt(document.getElementById('pomodorosBeforeLong').value) || 4;
+
+                    // Use modulo to determine if we should take long break
+                    // sessionsCompleted is the number of pomodoros finished
                     if (this.sessionsCompleted % pomodorosBeforeLong === 0) {
-                        this.cyclesCompleted++;
-                        
-                        // Check if we've reached the cycle limit (0 = infinite)
-                        if (maxCycles > 0 && this.cyclesCompleted >= maxCycles) {
-                            document.getElementById('status').textContent = 'All cycles completed!';
-                            return;
-                        }
-                        
+                        // Time for long break - also increment loop cycle
+                        this.loopCyclesCompleted++;
                         this.switchMode('longBreak');
+                    } else if (this.sessionsCompleted % pomodorosBeforeShort === 0) {
+                        // Time for short break
+                        this.switchMode('shortBreak');
                     } else {
+                        // Default to short break (shouldn't normally hit this)
                         this.switchMode('shortBreak');
                     }
                 } else {
+                    // After any break, return to pomodoro
                     this.switchMode('pomodoro');
                 }
+
                 this.start();
             }
 
@@ -859,6 +876,14 @@
             content.classList.toggle('collapsed');
             button.textContent = content.classList.contains('collapsed') ? '▼' : '▲';
         }
+    
+        // Update loop cycles when input changes
+        document.getElementById('loopCycles').addEventListener('input', function() {
+            if (timer) {
+                timer.loopCycles = parseInt(this.value) || 0;
+            }
+        });
+
     </script>
 </body>
 </html>
