@@ -60,7 +60,16 @@
             display: inline-block;
         }
 
-        .timer-container {
+  		.footer-icon {
+            height: 1.5em;
+            width: auto;
+            vertical-align: middle;
+            margin-right: 0.4em;
+            margin-bottom: 0.1em;
+            display: inline-block;
+        }
+
+		.timer-container {
             background: white;
             border-radius: 20px;
             padding: 40px;
@@ -446,7 +455,7 @@
 <body>
     <header>
         <h1>
-            <img src="UWlogo.gif" alt="University of Wyoming Gif" class="header-icon">
+            <img src="UWlogo.gif" alt="University of Wyoming gif" class="header-icon">
             Pomodoro Timer
         </h1>
         <p class="subtitle">Cowboys Productivity Tool</p>
@@ -598,10 +607,12 @@
     -->
 
     <footer>
-        <img src="UWlogo.png" alt="University of Wyoming logo" class="header-icon"><br>
-		Go Cowboys!<br>
-        Made by and for UWyo students
-    </footer>
+	<center>
+        <img src="UWlogo.png" alt="University of Wyoming logo" class="footer-icon">
+		<p>Go Cowboys!</p>
+        <p>Made by and for UWyo students</p>
+    </center>
+	</footer>
 
     <script>
         class PomodoroTimer {
